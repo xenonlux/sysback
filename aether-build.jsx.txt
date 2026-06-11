@@ -1,0 +1,1130 @@
+import { useState } from "react";
+
+/* ═══ TOKENS ═══ */
+const T = {
+  bg:"#030609", card:"#07101F", border:"#0F2040", borderLit:"#1A3A5C",
+  cyan:"#00D9FF", violet:"#7C3AED", violetBr:"#A78BFA",
+  amber:"#F59E0B", green:"#10B981", pink:"#EC4899", teal:"#06B6D4",
+  text:"#E2E8F0", dim:"#94A3B8", muted:"#475569",
+  mono:`'JetBrains Mono','Fira Code',monospace`,
+};
+
+/* ═══ BUILD STEPS ═══ */
+const STEPS = [
+  {
+    n:"01", name:"Language Core", ar:"نواة اللغة", color:T.cyan, glyph:"⟁",
+    why:"اللغة هي القلب — كل شيء يعتمد عليها. بدون Parser لا يمكن بناء أي شيء.",
+    what:"Lexer + Parser + AST + دعم ٣ أوضاع + Code Generator",
+    stack:["TypeScript","Recursive Descent Parser","AST Nodes","Jest"],
+    output:"npm package: @aether/language",
+    weeks:"٣–٤ أسابيع",
+    deps:[]
+  },
+  {
+    n:"02", name:"Runtime Engine", ar:"محرك التنفيذ", color:T.violetBr, glyph:"⚙",
+    why:"بعد أن نفهم الكود، نحتاج من يُنفِّذه. Runtime هو من يُحوِّل AST إلى عمل فعلي.",
+    what:"AST Executor + Event Bus + Environment Scope + Built-in Functions",
+    stack:["TypeScript","Tree-Walking Interpreter","Web Workers","WASM"],
+    output:"npm package: @aether/runtime",
+    weeks:"٤–٥ أسابيع",
+    deps:["Language Core"]
+  },
+  {
+    n:"03", name:"Flow Data", ar:"تدفق البيانات", color:T.green, glyph:"≋",
+    why:"الـ Runtime يحتاج مكاناً يقرأ منه ويكتب إليه. Flow Data هو الذاكرة المستمرة للنظام.",
+    what:"Event Stream + Append-Only Log + Time Machine + Reactive Queries",
+    stack:["TypeScript","Event Sourcing","IndexedDB","RxJS-like Observables"],
+    output:"npm package: @aether/flow",
+    weeks:"٣–٤ أسابيع",
+    deps:["Runtime Engine"]
+  },
+  {
+    n:"04", name:"Network Mesh", ar:"شبكة التواصل", color:T.amber, glyph:"⬡",
+    why:"الأنظمة المبنية بـ AETHER تحتاج أن تتحدث مع بعضها ومع العالم الخارجي.",
+    what:"Protocol Adapter + P2P Layer + Auto-Router + HTTP/WebSocket/Custom",
+    stack:["TypeScript","HTTP/3","WebRTC","libp2p concepts","QUIC"],
+    output:"npm package: @aether/network",
+    weeks:"٤–٥ أسابيع",
+    deps:["Runtime Engine"]
+  },
+  {
+    n:"05", name:"Quantum Guard", ar:"الأمان الكمّي", color:T.pink, glyph:"⬟",
+    why:"الأمان يجب أن يكون مدمجاً في البنية، لا مضافاً لاحقاً. محصَّن ضد المستقبل.",
+    what:"Post-Quantum Crypto + Zero-Trust + Identity DNA + Proof Chain",
+    stack:["Rust + WASM","CRYSTALS-Kyber","CRYSTALS-Dilithium","WebCrypto"],
+    output:"npm package: @aether/guard",
+    weeks:"٥–٦ أسابيع",
+    deps:["Runtime Engine","Flow Data"]
+  },
+  {
+    n:"06", name:"Universal Shell", ar:"الغلاف الشامل", color:T.teal, glyph:"◈",
+    why:"النظام يعمل في كل مكان — Browser، Desktop، CLI — بواجهة واحدة موحدة.",
+    what:"Browser Runtime + Desktop App (Tauri) + CLI + Visual Editor",
+    stack:["React","Tauri/Rust","Node.js","Monaco Editor","Canvas API"],
+    output:"3 تطبيقات: web + desktop + cli",
+    weeks:"٦–٨ أسابيع",
+    deps:["Runtime Engine","Flow Data","Network Mesh"]
+  },
+  {
+    n:"07", name:"Self-Evolution", ar:"التطور الذاتي", color:T.violetBr, glyph:"∞",
+    why:"النظام يتعلم من الاستخدام ويُحسِّن نفسه. الهدف النهائي من AETHER.",
+    what:"Usage Analytics + Pattern Mining + Self-Optimizer + Auto-Upgrade",
+    stack:["TypeScript","TensorFlow.js","Statistical Analysis","Graph Neural Net"],
+    output:"npm package: @aether/evolution",
+    weeks:"٨–١٠ أسابيع",
+    deps:["كل الطبقات السابقة"]
+  },
+];
+
+/* ═══ PROMPTS ═══ */
+const P = {};
+
+P.lang = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Language Core — a hybrid parser supporting 3 input
+modes that all compile to one unified AST.
+
+═══════════════════════════════════════
+LANGUAGE SPECIFICATION
+═══════════════════════════════════════
+
+MODE 1 — CODE SYNTAX:
+  stream <name> [modifiers] {
+    on <event>(<params>) [modifiers] {
+      let <x> = validate <expr> { <field>: <Type>.<rule>, ... }
+      flow.<store> <- <data>
+      emit <signal>(<payload>)
+      yield Response.<type>(<data>)
+    }
+  }
+
+MODIFIERS: quantum | transparent | parallel | cached(<ttl>)
+
+BUILT-IN TYPES:
+  Primitives:  String, Int, Float, Bool
+  Domain:      Email, Password, URL, UUID, Date
+  Collections: List<T>, Map<K,V>, Optional<T>
+  Custom:      type User = { name: String, email: Email }
+
+VALIDATION RULES: .format .min(n) .max(n) .strong .unique .required
+
+RESPONSE TYPES:
+  Response.ok(data)  Response.created(data)
+  Response.error(msg, trace?)  Response.redirect(url)
+
+MODE 2 — VISUAL (JSON graph → same AST):
+  { "type":"stream","name":"users","handlers":[
+      {"event":"create","body":[
+        {"type":"flow_write","store":"users","data":"$input"}
+      ]}
+  ]}
+
+MODE 3 — NATURAL (plain text → same AST):
+  "When a user registers, validate their email,
+   save them to users flow, and send a welcome signal"
+  Arabic is also supported.
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript strict mode
+═══════════════════════════════════════
+
+src/
+  lexer/tokens.ts        — TokenType enum + Token interface
+  lexer/lexer.ts         — full lexer, tracks line+col
+  parser/ast.ts          — complete typed AST nodes
+  parser/parser.ts       — recursive descent, full error recovery
+  parser/error.ts        — ParseError with location + hint
+  modes/code.ts          — CODE MODE entry point
+  modes/visual.ts        — JSON graph → AST
+  modes/natural.ts       — NLP rule engine → AST (EN + AR)
+  modes/bridge.ts        — bidirectional: any mode ↔ any mode
+  typechecker/checker.ts — static type checking
+  codegen/js.ts          — AST → clean JavaScript/TypeScript
+  codegen/regenerate.ts  — AST → source in any mode
+  index.ts               — clean public API
+
+tests/ — full jest suite for all modules
+README.md — usage + examples + mode switching guide
+
+RULES:
+• Zero runtime dependencies (only devDeps for tests)
+• 100% implemented — no TODOs, no stubs
+• Error messages human-readable with suggestions
+• Bidirectional: source → AST → source must be lossless
+• Natural mode handles Arabic + English
+
+EXAMPLE THAT MUST PARSE AND ROUND-TRIP:
+  stream auth quantum {
+    on login(req) {
+      let user = validate req {
+        email: Email.format,
+        password: Password.strong(min: 8)
+      }
+      yield Response.ok(token: sign(user.id))
+    }
+    on error(e) transparent {
+      yield Response.error(e.trace)
+    }
+  }`;
+
+P.runtime = `You are building AETHER — a next-generation autonomous backend system.
+The Language Core (@aether/language) already exists and produces an AST.
+
+TASK: Build the AETHER Runtime Engine that executes the AST.
+
+═══════════════════════════════════════
+EXECUTION MODEL
+═══════════════════════════════════════
+
+STREAMS are long-lived listeners that wait for events.
+HANDLERS run when their matching event arrives.
+EXECUTION is async-first. Side effects go through Flow Data.
+ERRORS are caught per-handler, not globally.
+
+CORE CONCEPTS:
+  StreamRegistry   — registers + manages active streams
+  EventBus         — routes events to matching handlers
+  Executor         — walks AST nodes, produces side effects
+  Environment      — lexical scope + variable bindings
+  TypeCoercer      — runtime type checking + coercion
+
+BUILT-IN FUNCTIONS (fully implement all):
+  validate(data, schema)   → validated data | ValidationError
+  hash(str, algo?)         → Promise<string>  (argon2id default)
+  sign(payload, secret?)   → string  (compact JWT-like)
+  verify(token, secret?)   → payload | null
+  uuid()                   → string (v4)
+  now()                    → ISO timestamp string
+  emit(signal, data)       → void (calls EventBus)
+  log(...args)             → void (transparent mode only)
+
+EXECUTION ENVIRONMENTS:
+  NodeRuntime    — full OS access (files, network, env vars)
+  BrowserRuntime — sandboxed, no FS, uses postMessage
+  WorkerRuntime  — isolated Web Worker, receives tasks
+
+PERFORMANCE TARGET: ≥ 10,000 handled events/sec.
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript strict mode
+═══════════════════════════════════════
+
+src/
+  runtime/executor.ts        — AST tree-walking interpreter
+  runtime/environment.ts     — scope chain + closures
+  runtime/event-bus.ts       — typed pub/sub + routing
+  runtime/stream-registry.ts — stream lifecycle management
+  builtins/crypto.ts         — hash, sign, verify
+  builtins/validate.ts       — schema validation engine
+  builtins/response.ts       — Response builder + types
+  targets/node.ts            — Node.js runtime adapter
+  targets/browser.ts         — Browser runtime adapter
+  targets/worker.ts          — Web Worker adapter
+  compiler/js-emit.ts        — AST → runnable JS string
+  compiler/optimizer.ts      — dead code + constant folding
+  index.ts                   — runtime factory + public API
+
+tests/ — full jest suite including:
+  • Stream registration + event routing
+  • All statement types (let, flow, emit, yield, if, await)
+  • Type validation + errors
+  • Async execution + concurrency
+  • Cross-environment (mock browser + node)
+
+No TODOs. No stubs. Fully working code only.`;
+
+P.data = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Flow Data Engine — the persistence layer.
+Replace traditional databases with a continuous, immutable event stream.
+
+═══════════════════════════════════════
+CORE CONCEPT
+═══════════════════════════════════════
+
+INSTEAD OF:  INSERT INTO users VALUES (...)
+AETHER USES: flow.users <- { name: "Alice", email: "a@b.com" }
+
+CURRENT STATE = reduction of all past events.
+EVERY write is an APPEND. Nothing is ever deleted or modified.
+Any historical state can be reconstructed (time-travel).
+
+FLOW OPERATIONS:
+  Write:   flow.users <- data
+  Read:    flow.users.latest(n)
+  Filter:  flow.users.where(u => u.active === true)
+  Map:     flow.users.map(u => u.name)
+  Reduce:  flow.users.reduce((acc, u) => acc + 1, 0)
+  Time:    flow.users.at("2025-01-01")
+  Since:   flow.users.since("2024-06-01")
+  Watch:   flow.users.subscribe(callback)
+  Snap:    flow.users.snapshot()
+
+FLOW EVENT STRUCTURE:
+  { id: UUID, timestamp: ISO, stream: string,
+    data: T, meta: { source, version, causedBy? } }
+
+STORAGE BACKENDS (all must be implemented):
+  MemoryStore — in-process Map (dev + testing)
+  FileStore   — append-only .ndjson log (single-node prod)
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript strict mode
+═══════════════════════════════════════
+
+src/
+  flow/flow.ts           — Flow<T> class with all operations
+  flow/event.ts          — FlowEvent<T> type + factory
+  flow/query.ts          — lazy FlowQuery builder
+  flow/snapshot.ts       — materialized view engine
+  flow/store.ts          — FlowStore: manages named flows
+  storage/interface.ts   — StorageBackend interface
+  storage/memory.ts      — in-memory backend
+  storage/file.ts        — file-based persistent backend
+  reactive/observable.ts — lightweight Observable + operators
+  index.ts               — public API
+
+tests/ — full jest suite:
+  • Write + read round-trip
+  • Where / map / reduce / at / since
+  • Subscribe + reactive updates
+  • Snapshot correctness
+  • Time-travel consistency
+  • Large-volume performance (100k events)
+
+REQUIREMENTS:
+• Immutable: throw if mutation of past events is attempted
+• Reactive: .subscribe() delivers events in real-time
+• Type-safe: generic Flow<T> throughout
+• Indexed: auto B-tree index on timestamp + common fields
+• Backpressure: slow subscribers get buffered, not dropped`;
+
+P.network = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Network Mesh — an adaptive protocol layer that
+automatically selects the best communication method.
+
+═══════════════════════════════════════
+NETWORK PHILOSOPHY
+═══════════════════════════════════════
+
+AETHER systems should communicate without caring HOW.
+The Network Mesh inspects context and routes optimally:
+  • Same process      → direct function call (zero overhead)
+  • Same machine      → Unix socket / shared memory
+  • Local network     → TCP / UDP
+  • Internet          → HTTP/3 (QUIC) or WebSocket
+  • P2P direct        → WebRTC DataChannel
+  • Fallback          → HTTP/1.1
+
+All channels expose the SAME MESSAGE API.
+
+AETHER MESSAGE FORMAT:
+  { id: UUID, type: "call"|"event"|"stream",
+    target: "stream.handler",
+    payload: unknown,
+    meta: { source, timestamp, traceId } }
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript strict mode
+═══════════════════════════════════════
+
+src/
+  mesh/router.ts         — auto-selects transport by context
+  mesh/message.ts        — AetherMessage type + factory + validation
+  transports/
+    local.ts             — in-process direct call
+    tcp.ts               — raw TCP (Node.js net module)
+    http.ts              — HTTP/1.1 + HTTP/2 adapter
+    websocket.ts         — full-duplex WebSocket transport
+    webrtc.ts            — P2P WebRTC DataChannel
+  protocols/
+    codec.ts             — encode/decode: JSON + MessagePack
+    framing.ts           — length-prefix framing for TCP
+  client/
+    proxy.ts             — auto-routing client proxy
+    retry.ts             — exponential backoff + circuit breaker
+    load-balancer.ts     — round-robin + least-connections
+  server/
+    listener.ts          — multi-transport server
+    handler-registry.ts  — maps message targets to handlers
+  index.ts               — public API
+
+INCLUDE: full test suite + README with architecture diagram.
+All transports must pass the same compatibility test suite.`;
+
+P.security = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Quantum Guard — security layer resistant to quantum computers.
+
+═══════════════════════════════════════
+SECURITY PHILOSOPHY
+═══════════════════════════════════════
+
+Security in AETHER is not a layer on top — it is woven into the language.
+Every "quantum" modifier activates this layer automatically.
+Zero-Trust: nothing is trusted by default. Everything is verified.
+
+POST-QUANTUM ALGORITHMS (NIST-standardized):
+  Key Exchange:  CRYSTALS-Kyber (ML-KEM)
+  Signatures:    CRYSTALS-Dilithium (ML-DSA)
+  Hashing:       SHA-3 (256 + 512)
+  Symmetric:     AES-256-GCM (still quantum-resistant at 256-bit)
+
+IDENTITY DNA CONCEPT:
+  Every AETHER identity is a keypair derived from:
+  { publicKey, privateKey, did: "aether:did:<fingerprint>" }
+  No passwords stored. Everything signed.
+
+ZERO-TRUST MODEL:
+  • Every request carries a signed token
+  • Every handler can verify independently
+  • No implicit trust between streams
+  • Full audit trail via transparent modifier
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript + WebCrypto
+═══════════════════════════════════════
+
+src/
+  crypto/
+    kyber.ts         — CRYSTALS-Kyber KEM (use liboqs-wasm binding)
+    dilithium.ts     — CRYSTALS-Dilithium signatures
+    symmetric.ts     — AES-256-GCM encrypt/decrypt
+    hash.ts          — SHA-3 variants
+    classic.ts       — RSA + ECDSA (legacy compat)
+  identity/
+    keypair.ts       — generate + store AETHER identity
+    did.ts           — decentralized identifier scheme
+    token.ts         — sign/verify AETHER tokens (post-quantum)
+  zero-trust/
+    verifier.ts      — request verification middleware
+    policy.ts        — access policy engine (rules + conditions)
+    audit.ts         — immutable audit log writer
+  integration/
+    runtime-plugin.ts — hooks into AETHER Runtime
+    language-types.ts — types for "quantum" modifier handling
+  index.ts — public API
+
+TARGET: must work in both Node.js and Browser (via WebAssembly).
+Include test suite with attack scenarios (replay, MITM, downgrade).`;
+
+P.shell = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Universal Shell — three environments in one codebase:
+  1. Browser-based IDE + Runtime (Web App)
+  2. Desktop App (Tauri + Rust)
+  3. CLI (Node.js)
+
+All three use the same @aether/language + @aether/runtime packages.
+
+═══════════════════════════════════════
+BROWSER SHELL
+═══════════════════════════════════════
+
+A full-featured web IDE for writing, running, and debugging AETHER systems.
+
+PANELS:
+  Left:    File tree + project structure
+  Center:  Code editor (Monaco) with AETHER language support
+             — syntax highlighting
+             — autocomplete (types, streams, built-ins)
+             — inline error markers
+             — live type inference hints
+  Right:   Live preview panel showing:
+             — running streams
+             — event log (transparent mode)
+             — flow data inspector
+             — network activity
+  Bottom:  Terminal output + REPL
+
+FEATURES:
+  • Mode switcher: toggle Code ↔ Visual ↔ Natural in editor
+  • Run button: executes current file in browser runtime
+  • Breakpoints + step debugger
+  • Dark theme only (matches AETHER aesthetic)
+  • Keyboard shortcuts (VS Code compatible)
+
+═══════════════════════════════════════
+DESKTOP SHELL (Tauri)
+═══════════════════════════════════════
+
+Same IDE as browser, wrapped in Tauri for native performance.
+Additional capabilities:
+  • File system access (open/save projects)
+  • Native notifications
+  • System tray with running streams monitor
+  • Auto-update mechanism
+
+═══════════════════════════════════════
+CLI SHELL
+═══════════════════════════════════════
+
+aether run <file.ae>         — run a .ae file
+aether build <file.ae>       — compile to JS
+aether check <file.ae>       — type-check only
+aether repl                  — interactive REPL
+aether new <name>            — scaffold new project
+aether stream ls             — list running streams
+aether stream kill <name>    — stop a stream
+aether flow inspect <store>  — dump flow data
+
+═══════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════
+
+packages/
+  web-shell/         — Vite + React app
+    src/
+      editor/        — Monaco integration + AETHER language
+      panels/        — FileTree, Preview, Terminal, Inspector
+      runtime/       — browser-side runtime bridge
+      theme/         — AETHER dark design system
+  desktop-shell/     — Tauri + Rust wrapper
+    src-tauri/       — Rust native layer
+  cli/               — Node.js CLI (commander.js)
+    src/
+      commands/      — run, build, check, repl, new, stream, flow
+
+All fully implemented, no stubs, with README install + usage guide.`;
+
+P.visual = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Visual Editor — a canvas-based flow editor that lets
+users build AETHER systems by connecting visual nodes instead of writing code.
+
+═══════════════════════════════════════
+VISUAL MODE CONCEPT
+═══════════════════════════════════════
+
+Each AETHER construct maps to a visual node:
+  STREAM       → container box (blue border, name header)
+  HANDLER      → event node (rounded, shows event name)
+  VALIDATE     → diamond shape (shows type constraints)
+  FLOW WRITE   → storage node (cylinder shape, store name)
+  EMIT         → signal node (lightning bolt icon)
+  YIELD        → output node (arrow-right, response type)
+  IF/ELSE      → branch node (diamond, condition label)
+
+CONNECTIONS between nodes represent data flow.
+Dragging a connection from node output to node input creates a link.
+
+THE EDITOR MUST:
+  • Export to AETHER CODE MODE (via @aether/language bridge)
+  • Import from AETHER CODE MODE (parse → render as nodes)
+  • Live validation: red outline if connection is type-incompatible
+  • Minimap in corner for large flows
+  • Auto-layout button (Dagre algorithm)
+  • Undo/redo (20 steps)
+  • Copy/paste nodes
+  • Grid snap + alignment guides
+
+═══════════════════════════════════════
+DELIVERABLES — React + TypeScript
+═══════════════════════════════════════
+
+src/
+  canvas/
+    canvas.tsx          — main SVG/Canvas rendering surface
+    pan-zoom.ts         — infinite canvas pan + zoom
+    grid.ts             — background grid + snap
+  nodes/
+    stream-node.tsx     — stream container
+    handler-node.tsx    — event handler
+    validate-node.tsx   — validation diamond
+    flow-node.tsx       — data store write
+    emit-node.tsx       — signal emitter
+    yield-node.tsx      — response output
+    branch-node.tsx     — if/else branch
+  edges/
+    edge.tsx            — bezier curve connection
+    edge-label.tsx      — data type label on edge
+    port.tsx            — input/output ports on nodes
+  toolbar/
+    node-palette.tsx    — drag-to-add node palette
+    action-bar.tsx      — run, export, layout, undo buttons
+  sync/
+    visual-to-ast.ts    — visual graph → AETHER AST
+    ast-to-visual.ts    — AETHER AST → visual graph
+  index.tsx             — AetherVisualEditor component (embeddable)
+
+The editor must be a standalone embeddable React component.
+Export: <AetherVisualEditor onChange={ast => ...} initialAst={...} />`;
+
+P.natural = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Natural Language Bridge — converts plain human text
+(English and Arabic) into valid AETHER AST.
+
+═══════════════════════════════════════
+CONCEPT
+═══════════════════════════════════════
+
+A user types:
+  "When a user registers, validate their email and password,
+   save them to the users stream, and send a welcome signal"
+
+The Bridge produces the AETHER AST equivalent of:
+  stream users {
+    on register(req) {
+      let user = validate req { email: Email.format, password: Password.strong }
+      flow.users <- user
+      emit signal.welcome(user.id)
+      yield Response.created(user)
+    }
+  }
+
+Arabic input must also work:
+  "عند تسجيل مستخدم جديد، تحقق من البريد والكلمة السرية،
+   احفظه في تدفق المستخدمين، وأرسل إشارة ترحيب"
+
+═══════════════════════════════════════
+APPROACH (NO external LLM required)
+═══════════════════════════════════════
+
+STAGE 1 — Intent Detection
+  Identify: TRIGGER ("when", "if", "عند", "إذا")
+            ACTIONS ("save", "احفظ", "validate", "تحقق")
+            ENTITIES ("user", "مستخدم", "email", "flow")
+
+STAGE 2 — Pattern Matching
+  Use a rule-based pattern library:
+  "validate [entity]'s [field]" → ValidateExpr node
+  "save [entity] to [store]"    → FlowWriteStmt node
+  "send [signal] to [entity]"   → EmitStmt node
+
+STAGE 3 — AST Construction
+  Assemble matched patterns into valid AETHER AST.
+  Fill in defaults (Response.created for registration, etc.)
+
+STAGE 4 — Confidence + Clarification
+  If confidence < 80%, return suggestions for user to confirm.
+  "Did you mean: validate email format and password strength?"
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript
+═══════════════════════════════════════
+
+src/
+  detect/
+    intent.ts        — trigger + action + entity extraction
+    patterns.ts      — bilingual pattern library (EN + AR)
+    tokenizer.ts     — word tokenizer (handles Arabic morphology)
+  map/
+    action-map.ts    — action phrases → AST node types
+    entity-map.ts    — entity names → AETHER types
+    template.ts      — AST templates for common patterns
+  build/
+    ast-builder.ts   — constructs AST from extracted intents
+    defaults.ts      — smart defaults (auto-infer Response type etc.)
+  feedback/
+    confidence.ts    — confidence scoring
+    suggestion.ts    — low-confidence suggestion generator
+  index.ts           — NaturalBridge class + translate(text) → {ast, confidence, suggestions}
+
+Include: 50+ test cases (EN + AR) covering common backend patterns.`;
+
+P.evolution = `You are building AETHER — a next-generation autonomous backend system.
+
+TASK: Build the AETHER Self-Evolution Module — the system that makes AETHER
+learn from usage patterns and optimize itself over time.
+
+═══════════════════════════════════════
+SELF-EVOLUTION CONCEPT
+═══════════════════════════════════════
+
+AETHER should improve without human intervention. Three layers:
+
+LAYER 1 — OBSERVE (collect signals)
+  Every stream handler execution emits:
+  { stream, handler, duration_ms, memory_bytes,
+    event_count, error_rate, pattern: code_hash }
+
+LAYER 2 — ANALYZE (find patterns)
+  • Identify hot paths (executed > 1000/sec)
+  • Detect slow handlers (p99 > 100ms)
+  • Find redundant validations (same data re-validated)
+  • Spot unused streams (0 events in 7 days)
+  • Recognize common patterns → suggest built-in abstractions
+
+LAYER 3 — EVOLVE (apply improvements)
+  • Hot path JIT hints → passed to Runtime compiler
+  • Slow handlers → suggest async parallelization
+  • Redundant validations → cache validation results
+  • Common patterns → auto-generate reusable components
+  • Unused streams → suggest archiving
+
+═══════════════════════════════════════
+DELIVERABLES — TypeScript
+═══════════════════════════════════════
+
+src/
+  observe/
+    collector.ts        — hooks into Runtime, collects ExecutionSignal
+    buffer.ts           — ring buffer for recent signals (last 1M)
+    sampler.ts          — statistical sampling for high-volume streams
+  analyze/
+    hot-path.ts         — identifies hot paths + optimization hints
+    anomaly.ts          — detects performance anomalies (z-score)
+    pattern-miner.ts    — finds recurring code patterns
+    usage-graph.ts      — builds stream dependency + usage graph
+  evolve/
+    optimizer.ts        — generates optimization suggestions
+    jit-hints.ts        — hot-path hints → Runtime JIT interface
+    suggester.ts        — human-readable improvement suggestions
+    auto-apply.ts       — safe automatic optimizations (pure transforms)
+  storage/
+    signal-store.ts     — persistent storage for signals (uses Flow Data)
+    model-store.ts      — persists learned patterns
+  api/
+    dashboard.ts        — REST API for evolution insights
+    alerts.ts           — threshold-based alerting
+  index.ts              — EvolutionEngine class + public API
+
+SAFETY RULES for auto-apply:
+  • Only apply provably safe transformations (no behavioral changes)
+  • All changes logged to audit flow
+  • Human confirmation required for structural changes
+  • Rollback mechanism for every applied optimization`;
+
+P.master = `You are the world's best software architect.
+
+MISSION: Build AETHER — a complete, self-evolving, autonomous backend system
+that will change how the internet is built.
+
+AETHER IS:
+• A hybrid programming language (visual + code + natural language)
+• A runtime engine that executes anywhere
+• A data model built on continuous event streams
+• A self-healing network mesh
+• A quantum-resistant security layer
+• A self-evolving intelligence
+• 100% open source, owned by no company
+
+BUILD ORDER (respect this exactly):
+  1. @aether/language    — Lexer + Parser + AST + 3 modes + codegen
+  2. @aether/runtime     — Executor + EventBus + Builtins
+  3. @aether/flow        — Event streams + time-travel queries
+  4. @aether/network     — Adaptive protocol mesh
+  5. @aether/guard       — Post-quantum security
+  6. @aether/shell       — Browser IDE + Desktop + CLI
+  7. @aether/evolution   — Self-learning + optimization
+
+MONOREPO STRUCTURE:
+  aether/
+    packages/
+      language/   runtime/   flow/
+      network/    guard/     evolution/
+    apps/
+      web-shell/  desktop-shell/  cli/
+    docs/
+    examples/
+    package.json  (pnpm workspaces)
+    turbo.json    (turborepo pipeline)
+
+LANGUAGE SYNTAX EXAMPLE:
+  stream users quantum transparent {
+    on register(req) {
+      let user = validate req {
+        email: Email.format,
+        password: Password.strong(min: 8),
+        name: String.min(2)
+      }
+      user.password = await hash(user.password)
+      flow.users <- user
+      emit signal.welcome(user.id)
+      yield Response.created(token: sign(user.id))
+    }
+    on error(e) transparent {
+      yield Response.error(e.trace)
+    }
+  }
+
+TECHNICAL REQUIREMENTS FOR EVERY PACKAGE:
+  ✓ TypeScript strict mode — zero any
+  ✓ Zero production dependencies where possible
+  ✓ Full test suite (jest) — > 90% coverage
+  ✓ JSDoc on every public API
+  ✓ README with install + quickstart
+  ✓ Changelog + semantic versioning
+  ✓ Works in Node.js 18+ and modern browsers
+  ✓ No TODOs, no stubs — 100% implemented
+
+PERFORMANCE TARGETS:
+  Runtime:   ≥ 10,000 events/sec per stream
+  Flow Data: ≥ 100,000 events/sec write throughput
+  Network:   < 1ms local, < 10ms LAN latency
+  Parser:    ≥ 100,000 lines/sec
+
+OPEN SOURCE REQUIREMENTS:
+  License: Apache 2.0
+  Governance: RFC process for language changes
+  Contributing: CONTRIBUTING.md + good first issues
+  Community: plugin architecture from day one
+
+BUILD EVERYTHING. No partial implementations.
+This is the system that changes the internet.`;
+
+const PROMPT_LIST = [
+  { id:"lang",     cat:"language", title:"Language Parser",       ar:"المحلل النحوي الكامل",        diff:"HARD",   color:T.cyan,     desc:"محلل ثلاثي الأوضاع يُنتج AST موحداً", prompt: P.lang },
+  { id:"runtime",  cat:"runtime",  title:"Runtime Engine",        ar:"محرك التنفيذ",                diff:"HARD",   color:T.violetBr, desc:"ينفّذ الـ AST على أي بيئة تشغيل",     prompt: P.runtime },
+  { id:"data",     cat:"data",     title:"Flow Data Engine",       ar:"محرك تدفق البيانات",          diff:"HARD",   color:T.green,    desc:"نموذج أحداث بدلاً من قواعد البيانات", prompt: P.data },
+  { id:"network",  cat:"network",  title:"Network Mesh",          ar:"شبكة التواصل التكيّفية",       diff:"MEDIUM", color:T.amber,    desc:"بروتوكول يختار أفضل قناة تلقائياً",   prompt: P.network },
+  { id:"security", cat:"security", title:"Quantum Guard",         ar:"طبقة الأمان الكمّي",           diff:"HARD",   color:T.pink,     desc:"أمان محصَّن ضد حواسيب المستقبل",      prompt: P.security },
+  { id:"shell",    cat:"shell",    title:"Universal Shell",       ar:"الغلاف الشامل — ٣ بيئات",      diff:"MEDIUM", color:T.teal,     desc:"Browser IDE + Desktop + CLI",          prompt: P.shell },
+  { id:"visual",   cat:"language", title:"Visual Editor",         ar:"محرر بصري تفاعلي",             diff:"MEDIUM", color:T.cyan,     desc:"canvas editor يُولِّد AETHER code",   prompt: P.visual },
+  { id:"natural",  cat:"language", title:"Natural Language",      ar:"جسر اللغة الطبيعية",           diff:"MEDIUM", color:T.cyan,     desc:"عربي + إنجليزي → AST مباشرة",         prompt: P.natural },
+  { id:"evolution",cat:"evolution",title:"Self-Evolution",        ar:"وحدة التطور الذاتي",           diff:"EXPERT", color:T.violetBr, desc:"النظام يتعلم ويُحسِّن نفسه",          prompt: P.evolution },
+  { id:"master",   cat:"master",   title:"MASTER PROMPT",         ar:"بناء النظام كاملاً",           diff:"MASTER", color:T.amber,    desc:"prompt واحد يبني كل AETHER",          prompt: P.master },
+];
+
+const CATS = [
+  { id:"all",      label:"الكل",       color:T.dim },
+  { id:"language", label:"اللغة",      color:T.cyan },
+  { id:"runtime",  label:"Runtime",    color:T.violetBr },
+  { id:"data",     label:"البيانات",   color:T.green },
+  { id:"network",  label:"الشبكة",     color:T.amber },
+  { id:"security", label:"الأمان",     color:T.pink },
+  { id:"shell",    label:"الغلاف",     color:T.teal },
+  { id:"evolution",label:"التطور",     color:T.violetBr },
+  { id:"master",   label:"Master",     color:T.amber },
+];
+
+const DIFF_STYLE = {
+  MEDIUM: { bg:`${T.green}18`, border:`${T.green}40`, text:T.green },
+  HARD:   { bg:`${T.amber}18`, border:`${T.amber}40`, text:T.amber },
+  EXPERT: { bg:`${T.pink}18`,  border:`${T.pink}40`,  text:T.pink  },
+  MASTER: { bg:`${T.cyan}18`,  border:`${T.cyan}40`,  text:T.cyan  },
+};
+
+/* ═══ HELPERS ═══ */
+function Eyebrow({ label, color }) {
+  return (
+    <div style={{ display:"inline-block", padding:"3px 12px", borderRadius:6, marginBottom:12,
+      border:`1px solid ${(color||T.cyan)}30`, background:`${(color||T.cyan)}07`,
+      color:color||T.cyan, fontFamily:T.mono, fontSize:9, letterSpacing:4 }}>
+      {label}
+    </div>
+  );
+}
+function Hr() {
+  return <div style={{ height:1, background:`linear-gradient(90deg,transparent,${T.border} 20%,${T.border} 80%,transparent)`, margin:"40px 0" }} />;
+}
+function CopyBtn({ text }) {
+  const [done, setDone] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => { setDone(true); setTimeout(() => setDone(false), 2000); });
+  };
+  return (
+    <button onClick={copy} style={{
+      padding:"7px 16px", borderRadius:8, cursor:"pointer",
+      border:`1px solid ${done ? T.green+"60" : T.border}`,
+      background: done ? `${T.green}12` : "transparent",
+      color: done ? T.green : T.dim,
+      fontFamily:T.mono, fontSize:11, transition:"all 0.2s", flexShrink:0,
+    }}>
+      {done ? "✓ تم النسخ" : "نسخ ↗"}
+    </button>
+  );
+}
+
+/* ═══ TAB 1: BUILD PLAN ═══ */
+function BuildPlan() {
+  const [active, setActive] = useState(null);
+  return (
+    <div>
+      {/* Intro */}
+      <div style={{ padding:"20px 22px", borderRadius:14,
+        border:`1px solid ${T.border}`, background:T.card, marginBottom:32 }}>
+        <Eyebrow label="WHY THIS ORDER" />
+        <p style={{ color:T.dim, fontSize:13, lineHeight:1.9, margin:0 }}>
+          النظام يُبنى من الداخل للخارج. اللغة أولاً لأن كل شيء يتكلم بها.
+          Runtime ثانياً لأنه يُنفّذها. البيانات ثالثاً لأن Runtime يحتاج مكاناً يقرأ منه.
+          الشبكة والأمان فوق كل هذا. الواجهة آخراً لأنها تعرض ما بُني. التطور الذاتي يأتي حين يصبح النظام كاملاً.
+        </p>
+      </div>
+
+      {/* Steps */}
+      <div style={{ display:"flex", flexDirection:"column", gap:0,
+        border:`1px solid ${T.border}`, borderRadius:16, overflow:"hidden" }}>
+        {STEPS.map((s, i) => {
+          const open = active === i;
+          return (
+            <div key={s.n}
+              style={{ borderBottom: i < STEPS.length-1 ? `1px solid ${T.border}` : "none",
+                background: open ? `${s.color}08` : T.card, transition:"background 0.2s" }}>
+
+              <div onClick={() => setActive(open ? null : i)}
+                style={{ padding:"15px 18px", display:"flex",
+                  alignItems:"center", gap:14, cursor:"pointer" }}>
+
+                <div style={{ width:46, height:46, borderRadius:10, flexShrink:0,
+                  display:"flex", flexDirection:"column", alignItems:"center",
+                  justifyContent:"center", background:`${s.color}12`,
+                  border:`1px solid ${s.color}35` }}>
+                  <div style={{ color:T.muted, fontFamily:T.mono, fontSize:8 }}>STEP</div>
+                  <div style={{ color:s.color, fontFamily:T.mono,
+                    fontSize:18, fontWeight:800, lineHeight:1 }}>{s.n}</div>
+                </div>
+
+                <div style={{ flex:1 }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:3 }}>
+                    <span style={{ color:s.color, fontFamily:T.mono,
+                      fontSize:13, fontWeight:700 }}>{s.name}</span>
+                    <span style={{ color:T.muted, fontSize:11 }}>·</span>
+                    <span style={{ color:T.dim, fontSize:12 }}>{s.ar}</span>
+                  </div>
+                  <div style={{ color:T.muted, fontSize:11 }}>{s.what}</div>
+                </div>
+
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ padding:"3px 9px", borderRadius:6,
+                    border:`1px solid ${T.border}`,
+                    color:T.muted, fontFamily:T.mono, fontSize:10 }}>{s.weeks}</div>
+                  <div style={{ color: open ? s.color : T.muted, fontSize:20,
+                    transition:"transform 0.2s, color 0.2s",
+                    transform: open ? "rotate(90deg)" : "none" }}>›</div>
+                </div>
+              </div>
+
+              {open && (
+                <div style={{ padding:"4px 18px 20px 78px" }}>
+                  {/* Why */}
+                  <div style={{ padding:"10px 14px", borderRadius:8, marginBottom:12,
+                    background:`${s.color}08`, border:`1px solid ${s.color}25` }}>
+                    <div style={{ color:s.color, fontFamily:T.mono,
+                      fontSize:9, letterSpacing:2, marginBottom:5 }}>WHY FIRST</div>
+                    <div style={{ color:T.dim, fontSize:12, lineHeight:1.7 }}>{s.why}</div>
+                  </div>
+                  {/* Stack + Output */}
+                  <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                    <div style={{ padding:"10px 14px", borderRadius:8,
+                      border:`1px solid ${T.border}`, background:"#03060900" }}>
+                      <div style={{ color:T.muted, fontFamily:T.mono,
+                        fontSize:9, letterSpacing:2, marginBottom:8 }}>TECH STACK</div>
+                      {s.stack.map(x => (
+                        <div key={x} style={{ color:T.dim, fontSize:11,
+                          marginBottom:4, display:"flex", gap:6 }}>
+                          <span style={{ color:s.color }}>→</span> {x}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ padding:"10px 14px", borderRadius:8,
+                      border:`1px solid ${T.border}`, background:"#03060900" }}>
+                      <div style={{ color:T.muted, fontFamily:T.mono,
+                        fontSize:9, letterSpacing:2, marginBottom:8 }}>OUTPUT</div>
+                      <div style={{ color:s.color, fontFamily:T.mono,
+                        fontSize:11 }}>{s.output}</div>
+                      {s.deps.length > 0 && (
+                        <div style={{ marginTop:10 }}>
+                          <div style={{ color:T.muted, fontFamily:T.mono,
+                            fontSize:9, letterSpacing:2, marginBottom:5 }}>DEPENDS ON</div>
+                          {s.deps.map(d => (
+                            <div key={d} style={{ color:T.muted, fontSize:11,
+                              marginBottom:3 }}>← {d}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      <Hr />
+
+      {/* Timeline */}
+      <div>
+        <Eyebrow label="TIMELINE" />
+        <h3 style={{ color:T.text, fontSize:18, fontWeight:700,
+          margin:"0 0 20px" }}>الجدول الزمني التقديري</h3>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {[
+            { range:"شهر ١–٤",   label:"Language Core + Runtime Engine", color:T.cyan },
+            { range:"شهر ٥–٨",   label:"Flow Data + Network Mesh",        color:T.green },
+            { range:"شهر ٩–١٤",  label:"Quantum Guard + Universal Shell", color:T.pink },
+            { range:"شهر ١٥–٢٤", label:"Self-Evolution + Ecosystem",      color:T.violetBr },
+            { range:"السنة ٣+",  label:"الشبكة اللامركزية — تغيير الإنترنت", color:T.amber },
+          ].map(r => (
+            <div key={r.range} style={{ display:"flex", alignItems:"center", gap:12,
+              padding:"12px 16px", borderRadius:10,
+              border:`1px solid ${T.border}`, background:T.card }}>
+              <div style={{ width:90, flexShrink:0, color:r.color,
+                fontFamily:T.mono, fontSize:10, fontWeight:700 }}>{r.range}</div>
+              <div style={{ width:1, height:24, background:T.border, flexShrink:0 }} />
+              <div style={{ color:T.dim, fontSize:12 }}>{r.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ═══ TAB 2: PROMPTS ═══ */
+function PromptsLib() {
+  const [cat, setCat] = useState("all");
+  const [expanded, setExpanded] = useState(null);
+  const visible = cat === "all"
+    ? PROMPT_LIST
+    : PROMPT_LIST.filter(p => p.cat === cat);
+
+  return (
+    <div>
+      {/* Category filter */}
+      <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:24 }}>
+        {CATS.map(c => (
+          <button key={c.id} onClick={() => setCat(c.id)}
+            style={{ padding:"6px 14px", borderRadius:8, cursor:"pointer",
+              border:`1px solid ${cat === c.id ? c.color : T.border}`,
+              background: cat === c.id ? `${c.color}10` : "transparent",
+              color: cat === c.id ? c.color : T.muted,
+              fontFamily:T.mono, fontSize:10, letterSpacing:1,
+              transition:"all 0.15s" }}>
+            {c.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Prompt cards */}
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {visible.map(p => {
+          const isOpen = expanded === p.id;
+          const ds = DIFF_STYLE[p.diff];
+          return (
+            <div key={p.id}
+              style={{ borderRadius:12, overflow:"hidden",
+                border:`1px solid ${isOpen ? p.color+"40" : T.border}`,
+                background: isOpen ? `${p.color}06` : T.card,
+                transition:"all 0.2s" }}>
+
+              {/* Card header */}
+              <div style={{ padding:"15px 18px",
+                display:"flex", alignItems:"center", gap:12 }}>
+
+                <div style={{ flex:1, cursor:"pointer" }}
+                  onClick={() => setExpanded(isOpen ? null : p.id)}>
+                  <div style={{ display:"flex", alignItems:"center",
+                    gap:10, marginBottom:4, flexWrap:"wrap" }}>
+                    <span style={{ color:p.color, fontFamily:T.mono,
+                      fontSize:13, fontWeight:700 }}>{p.title}</span>
+                    <span style={{ color:T.muted, fontSize:11 }}>—</span>
+                    <span style={{ color:T.dim, fontSize:12 }}>{p.ar}</span>
+                    <div style={{ padding:"2px 8px", borderRadius:99,
+                      border:`1px solid ${ds.border}`,
+                      background:ds.bg, color:ds.text,
+                      fontFamily:T.mono, fontSize:9, letterSpacing:1 }}>
+                      {p.diff}
+                    </div>
+                  </div>
+                  <div style={{ color:T.muted, fontSize:11 }}>{p.desc}</div>
+                </div>
+
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <CopyBtn text={p.prompt} />
+                  <div onClick={() => setExpanded(isOpen ? null : p.id)}
+                    style={{ color: isOpen ? p.color : T.muted, fontSize:20,
+                      cursor:"pointer", transition:"transform 0.2s, color 0.2s",
+                      transform: isOpen ? "rotate(90deg)" : "none" }}>›</div>
+                </div>
+              </div>
+
+              {/* Expanded prompt */}
+              {isOpen && (
+                <div style={{ borderTop:`1px solid ${T.border}` }}>
+                  <div style={{ padding:"6px 18px", background:"#020408",
+                    display:"flex", alignItems:"center",
+                    justifyContent:"space-between" }}>
+                    <span style={{ color:T.muted, fontFamily:T.mono,
+                      fontSize:9, letterSpacing:2 }}>PROMPT · {p.title}</span>
+                    <CopyBtn text={p.prompt} />
+                  </div>
+                  <pre style={{ margin:0, padding:"20px 22px",
+                    fontFamily:T.mono, fontSize:11, lineHeight:1.85,
+                    color:T.dim, background:"#020408",
+                    whiteSpace:"pre-wrap", direction:"ltr",
+                    maxHeight:420, overflowY:"auto" }}>
+                    {p.prompt}
+                  </pre>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Copy all */}
+      <div style={{ marginTop:24, display:"flex", justifyContent:"center" }}>
+        <CopyBtn text={PROMPT_LIST.map(p => `${"=".repeat(60)}\n${p.title} — ${p.ar}\n${"=".repeat(60)}\n\n${p.prompt}`).join("\n\n\n")} />
+      </div>
+    </div>
+  );
+}
+
+/* ═══ APP ═══ */
+export default function App() {
+  const [tab, setTab] = useState("plan");
+  const TABS = [
+    { id:"plan",    label:"خطة البناء",       sub:"HOW TO BUILD" },
+    { id:"prompts", label:"مكتبة الـ Prompts", sub:"COPY & BUILD" },
+  ];
+
+  return (
+    <div style={{ minHeight:"100vh", background:T.bg, color:T.text,
+      fontFamily:"'Segoe UI',system-ui,sans-serif",
+      direction:"rtl", position:"relative" }}>
+
+      {/* Glow */}
+      <div style={{ position:"fixed", top:-200, right:-100, width:600, height:600,
+        background:`radial-gradient(circle,${T.violet}09 0%,transparent 65%)`,
+        pointerEvents:"none", zIndex:0 }} />
+      <div style={{ position:"fixed", bottom:-200, left:-100, width:500, height:500,
+        background:`radial-gradient(circle,${T.cyan}06 0%,transparent 65%)`,
+        pointerEvents:"none", zIndex:0 }} />
+
+      <div style={{ position:"relative", zIndex:1,
+        maxWidth:740, margin:"0 auto", padding:"36px 16px 100px" }}>
+
+        {/* Header */}
+        <div style={{ textAlign:"center", marginBottom:36 }}>
+          <div style={{ fontFamily:T.mono, fontSize:9, letterSpacing:8,
+            color:T.muted, marginBottom:12 }}>AETHER · BUILD GUIDE</div>
+          <h1 style={{ fontSize:"clamp(26px,6vw,38px)", fontWeight:900,
+            letterSpacing:-1, margin:0,
+            background:`linear-gradient(125deg,${T.cyan},${T.violetBr})`,
+            WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent" }}>
+            كيف تبني AETHER
+          </h1>
+          <p style={{ color:T.muted, fontSize:13, marginTop:8 }}>
+            خطة تقنية كاملة + ١٠ prompts جاهزة للتنفيذ الفوري
+          </p>
+        </div>
+
+        {/* Tabs */}
+        <div style={{ display:"flex", gap:10, marginBottom:32 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ flex:1, padding:"14px 10px", borderRadius:12, cursor:"pointer",
+                border:`1px solid ${tab === t.id ? T.cyan+"50" : T.border}`,
+                background: tab === t.id
+                  ? `linear-gradient(135deg,${T.cyan}0E,${T.violet}0A)`
+                  : T.card,
+                transition:"all 0.2s" }}>
+              <div style={{ color: tab === t.id ? T.cyan : T.dim,
+                fontFamily:T.mono, fontSize:9, letterSpacing:3,
+                marginBottom:5 }}>{t.sub}</div>
+              <div style={{ color: tab === t.id ? T.text : T.muted,
+                fontSize:14, fontWeight:700 }}>{t.label}</div>
+            </button>
+          ))}
+        </div>
+
+        {tab === "plan"    && <BuildPlan />}
+        {tab === "prompts" && <PromptsLib />}
+      </div>
+    </div>
+  );
+}
